@@ -1,0 +1,13 @@
+{
+  "name": "kostajh/drush-rest-api",
+  "description": "Drush REST API server",
+  "license": "GPL-2.0+",
+  "minimum-stability": "dev",
+  "prefer-stable": true,
+  "authors": [
+    { "name": "Kosta Harlan", "email": "kosta@harlan.mayfirst.org" }
+  ],
+  "require": {
+    "cboden/Ratchet": "0.3.*"
+  }
+}
