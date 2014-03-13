@@ -32,7 +32,8 @@ function rest_api_server_launch() {
   if ($headers = array_filter(drush_get_option_list('headers'))) {
     $env_vars['DRUSH_REST_API_HTTP_HEADERS'] = escapeshellarg(serialize($headers));
   }
-  $prepend = DRUSH_BASE_PATH . '/commands/rest/includes/DrushHttp.php';
+
+  $prepend = dirname(__DIR__) . '/includes/DrushHttp.php';
   $host = drush_get_option('host', 'localhost');
   $port = drush_get_option('port', '8888');
   $vars = '';

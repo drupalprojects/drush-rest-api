@@ -3,28 +3,37 @@
 /**
  * @file
  * Tests for rest-api commands.
- *
- * @group commands
  */
 
+require_once '/home/kosta/src/drupal/drush-rest-api/vendor/autoload.php';
 use Guzzle\Http\Client;
 
 define('DRUSH_REST_API_ACCESS_DENIED_MSG', '{"response_code":403,"error_status":1,"error_log":"Access denied."}');
 define('DRUSH_REST_API_ERROR_MSG', '{"error_status":1,"error_log":"Invalid request. REST API requests must use this format: {@alias}\/{command}\/{argument}\/{argument_two}?{option=value\u0026option2=value2}"}');
 
+
 class RestApiTest extends Drush_CommandTestCase {
+
+  protected function getHomeDir() {
+    return $_SERVER['HOME'];
+  }
   /**
    * Test the rest-api-request command.
    */
   public function testRestApiRequest() {
     // Check an empty request to rest-api-request.
-    $this->drush('rest-api-request');
+    $this->drush('cc', array('drush'));
+    $this->drush('rest-api-request', array(), array(
+      'include' => $this->getHomeDir() . '/.drush/drush-rest-api',
+    ));
     $output = $this->getOutput();
     $this->assertJson($output, 'Received valid JSON');
     // Check the contents of the json.
     $this->assertJsonStringEqualsJsonString(DRUSH_REST_API_ERROR_MSG, $output, 'Received expected JSON');
     // Now check a valid request, '@none/core-status?format=json'.
-    $this->drush('rest-api-request', array('@none/core-status?format=json'));
+    $this->drush('rest-api-request', array('@none/core-status?format=json'), array(
+      'include' => $this->getHomeDir() . '/.drush/drush-rest-api',
+    ));
     $output = $this->getOutput();
     $this->assertJson($output, 'Received valid JSON');
     $json = json_decode($output, TRUE);
@@ -32,11 +41,17 @@ class RestApiTest extends Drush_CommandTestCase {
     $this->assertEmpty($json['error_log'], 'Error log is empty.');
     $this->assertJson($json['output'], 'Returned JSON data as requested.');
     // Make an invalid request, using a bogus alias.
-    $this->drush('rest-api-request', array('@blah/core-status'));
+    $this->drush('rest-api-request', array('@blah/core-status'), array(
+      'include' => $this->getHomeDir() . '/.drush/drush-rest-api',
+    ));
     $output = $this->getOutput();
     $this->assertJsonStringEqualsJsonString(DRUSH_REST_API_ERROR_MSG, $output, 'Received error message.');
     // Check for access denied on invalid host.
-    $this->drush('rest-api-request', array('@none/core-status', 'drupal.org'), array('allowable-http-hosts' => 'localhost'));
+    $this->drush('rest-api-request', array('@none/core-status', 'drupal.org'),
+      array(
+        'include' => $this->getHomeDir() . '/.drush/drush-rest-api',
+        'allowable-http-hosts' => 'localhost',
+      ));
     $output = $this->getOutput();
     $this->assertJsonStringEqualsJsonString(DRUSH_REST_API_ACCESS_DENIED_MSG, $output, 'Received access denied message for disallowed host.');
     // Check for access denied on invalid IP.
@@ -46,6 +61,7 @@ class RestApiTest extends Drush_CommandTestCase {
         '8.8.8.8',
     ),
     array(
+      'include' => $this->getHomeDir() . '/.drush/drush-rest-api',
       'allowable-http-hosts' => 'drupal.org',
       'allowable-ips' => '127.0.0.1,0.0.0.0',
     ));
@@ -59,6 +75,7 @@ class RestApiTest extends Drush_CommandTestCase {
       '8.8.8.8',
     ),
     array(
+      'include' => $this->getHomeDir() . '/.drush/drush-rest-api',
       'allowable-http-hosts' => 'drupal.org',
       'allowable-ips' => '127.0.0.1,0.0.0.0,8.8.8.8',
     ));
@@ -73,6 +90,7 @@ class RestApiTest extends Drush_CommandTestCase {
    */
   public function testRestApiHttpServer() {
     // Launch a HTTP server.
+    $this->drush('cc', array('drush'));
     exec('drush rest-api-server start --server-type=http -y >/dev/null &');
     sleep(2);
     // Check status command.
@@ -101,7 +119,10 @@ class RestApiTest extends Drush_CommandTestCase {
       $this->assertJsonStringEqualsJsonString(DRUSH_REST_API_ERROR_MSG, $output, 'Received an error response.');
     }
     // Check an access denied request.
-    $this->drush('rest-api-server', array('stop'));
+    $this->drush('rest-api-server', array('stop'),
+      array(
+        'include' => $this->getHomeDir() . '/.drush/drush-rest-api',
+      ));
     sleep(2);
     exec('drush rest-api-server start --server-type=http --allowable-ips=8.8.8.8 -y >/dev/null &');
     sleep(2);
@@ -119,7 +140,10 @@ class RestApiTest extends Drush_CommandTestCase {
       $this->assertJsonStringEqualsJsonString(DRUSH_REST_API_ACCESS_DENIED_MSG, $output, 'Received an access denied response.');
     }
     // Check access denied for allowable hosts.
-    $this->drush('rest-api-server', array('stop'));
+    $this->drush('rest-api-server', array('stop'),
+      array(
+        'include' => $this->getHomeDir() . '/.drush/drush-rest-api',
+      ));
     sleep(2);
     exec('drush rest-api-server start --server-type=http --allowable-http-hosts=drush.ws -y >/dev/null &');
     sleep(2);
@@ -137,7 +161,10 @@ class RestApiTest extends Drush_CommandTestCase {
       $this->assertJsonStringEqualsJsonString(DRUSH_REST_API_ACCESS_DENIED_MSG, $output, 'Received an access denied response.');
     }
     // Check if one or multiple headers are set correctly.
-    $this->drush('rest-api-server', array('stop'));
+    $this->drush('rest-api-server', array('stop'),
+      array(
+        'include' => $this->getHomeDir() . '/.drush/drush-rest-api',
+      ));
     sleep(2);
     exec('drush rest-api-server start --server-type=http --headers="Access-Control-Allow-Origin:
  *, Drush: Drush" -y >/dev/null &');
@@ -147,7 +174,9 @@ class RestApiTest extends Drush_CommandTestCase {
     $response = $request->send();
     $this->assertEquals($response->hasHeader('Access-Control-Allow-Origin'), 1, 'Access-Control-Allow-Origin custom header is set.');
     $this->assertEquals($response->hasHeader('Drush'), 1, 'Custom Drush header is set.');
-    $this->drush('rest-api-server', array('stop'));
+    $this->drush('rest-api-server', array('stop'), array(
+      'include' => $this->getHomeDir() . '/.drush/drush-rest-api',
+    ));
   }
 
   /**

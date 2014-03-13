@@ -5,6 +5,8 @@
  * Code for Drush REST API functionality.
  */
 
+require_once 'vendor/autoload.php';
+
 /**
  * Implements hook_drush_help().
  */
